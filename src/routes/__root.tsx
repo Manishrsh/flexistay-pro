@@ -92,6 +92,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "FitCore — Gym Management System" },
+      { name: "description", content: "All-in-one gym management: members, memberships, attendance, trainers, workouts, payments, expenses, inventory, leads and reports." },
+      { property: "og:description", content: "All-in-one gym management: members, memberships, attendance, trainers, workouts, payments, expenses, inventory, leads and reports." },
+      { name: "twitter:description", content: "All-in-one gym management: members, memberships, attendance, trainers, workouts, payments, expenses, inventory, leads and reports." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ff127b34-3235-4f66-b823-6b6277aef846/id-preview-7dda48f8--e68d3d91-eff9-40a0-b227-7819b64adaf3.lovable.app-1783349294820.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ff127b34-3235-4f66-b823-6b6277aef846/id-preview-7dda48f8--e68d3d91-eff9-40a0-b227-7819b64adaf3.lovable.app-1783349294820.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
