@@ -361,9 +361,21 @@ function ResourceForm({
                 <ReferenceCombobox
                   field={f}
                   value={values[f.name] ? String(values[f.name]) : ""}
-                  onChange={(v) => set(f.name, v)}
+                  onChange={(v, row) => {
+                    setValues((s) => {
+                      const next: Row = { ...s, [f.name]: v };
+                      if (row && f.autofill) {
+                        for (const [target, src] of Object.entries(f.autofill)) {
+                          const val = row[src];
+                          if (val !== undefined && val !== null) next[target] = val;
+                        }
+                      }
+                      return next;
+                    });
+                  }}
                   required={f.required}
                 />
+
               ) : (
                 <Input
                   type={f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
