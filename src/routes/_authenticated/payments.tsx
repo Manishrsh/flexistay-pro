@@ -11,7 +11,16 @@ export const Route = createFileRoute("/_authenticated/payments")({
         fields: [
           { name: "invoice_no", label: "Invoice #", type: "text" },
           { name: "member_id", label: "Member", type: "reference", refTable: "members", refLabel: "full_name" },
-          { name: "membership_id", label: "Membership", type: "reference", refTable: "memberships", refLabel: "id", refSearchColumn: "id" },
+          {
+            name: "membership_id",
+            label: "Membership",
+            type: "reference",
+            refTable: "memberships",
+            refLabel: "id",
+            refSearchColumn: "id",
+            autofill: { member_id: "member_id", amount: "amount" },
+          },
+
           { name: "amount", label: "Base amount (₹)", type: "number", step: "0.01", required: true },
           { name: "gst_amount", label: "GST amount (₹)", type: "number", step: "0.01" },
           { name: "discount", label: "Discount (₹)", type: "number", step: "0.01" },
