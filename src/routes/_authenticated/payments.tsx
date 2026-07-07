@@ -64,6 +64,14 @@ export const Route = createFileRoute("/_authenticated/payments")({
           { key: "status", label: "Status" },
           { key: "paid_on", label: "Date" },
         ],
+        afterSave: async (row) => {
+          try {
+            await generatePaymentInvoice(row);
+            toast.success("Invoice downloaded");
+          } catch (e) {
+            toast.error("Invoice failed: " + (e as Error).message);
+          }
+        },
       }}
     />
   ),
