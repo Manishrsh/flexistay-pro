@@ -75,7 +75,10 @@ export type Field = {
   refValue?: string; // default "id"
   refLabel?: string; // display column, e.g. "full_name"
   refSearchColumn?: string; // column to ilike-search, defaults to refLabel
+  // Map: this form field name -> column on the referenced row to copy from
+  autofill?: Record<string, string>;
 };
+
 
 
 export type Column<T = Record<string, unknown>> = {
@@ -358,9 +361,21 @@ function ResourceForm({
                 <ReferenceCombobox
                   field={f}
                   value={values[f.name] ? String(values[f.name]) : ""}
-                  onChange={(v) => set(f.name, v)}
+                  onChange={(v, row) => {
+                    setValues((s) => {
+                      const next: Row = { ...s, [f.name]: v };
+                      if (row && f.autofill) {
+                        for (const [target, src] of Object.entries(f.autofill)) {
+                          const val = row[src];
+                          if (val !== undefined && val !== null) next[target] = val;
+                        }
+                      }
+                      return next;
+                    });
+                  }}
                   required={f.required}
                 />
+
               ) : (
                 <Input
                   type={f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
@@ -391,7 +406,7 @@ function ReferenceCombobox({
 }: {
   field: Field;
   value: string;
-  onChange: (v: string) => void;
+  onChange: (v: string, row?: Row | null) => void;
   required?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -404,13 +419,14 @@ function ReferenceCombobox({
   const { data: options = [] } = useQuery({
     queryKey: ["ref-opts", table, labelCol, search],
     queryFn: async () => {
-      let q = supabase.from(table as never).select(`${valueCol}, ${labelCol}`);
+      let q = supabase.from(table as never).select("*");
       if (search) q = q.ilike(searchCol, `%${search}%`) as typeof q;
       const { data, error } = await q.limit(50);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
   });
+
 
   const { data: selected } = useQuery({
     queryKey: ["ref-selected", table, labelCol, value],
@@ -469,9 +485,10 @@ function ReferenceCombobox({
                       key={v}
                       value={v}
                       onSelect={() => {
-                        onChange(v);
+                        onChange(v, o);
                         setOpen(false);
                       }}
+
                     >
                       <Check className={cn("h-4 w-4", value === v ? "opacity-100" : "opacity-0")} />
                       {l}
