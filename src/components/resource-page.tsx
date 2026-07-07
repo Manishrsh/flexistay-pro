@@ -419,13 +419,14 @@ function ReferenceCombobox({
   const { data: options = [] } = useQuery({
     queryKey: ["ref-opts", table, labelCol, search],
     queryFn: async () => {
-      let q = supabase.from(table as never).select(`${valueCol}, ${labelCol}`);
+      let q = supabase.from(table as never).select("*");
       if (search) q = q.ilike(searchCol, `%${search}%`) as typeof q;
       const { data, error } = await q.limit(50);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
   });
+
 
   const { data: selected } = useQuery({
     queryKey: ["ref-selected", table, labelCol, value],
