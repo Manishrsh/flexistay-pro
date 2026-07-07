@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/diet")({
         searchColumn: "name",
         fields: [
           { name: "name", label: "Plan name", type: "text", required: true },
-          { name: "member_id", label: "Member ID (optional)", type: "text" },
+          { name: "member_id", label: "Member (optional)", type: "reference", refTable: "members", refLabel: "full_name" },
           { name: "breakfast", label: "Breakfast", type: "textarea" },
           { name: "lunch", label: "Lunch", type: "textarea" },
           { name: "snacks", label: "Snacks", type: "textarea" },

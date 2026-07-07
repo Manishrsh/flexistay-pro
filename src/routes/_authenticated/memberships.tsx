@@ -9,8 +9,8 @@ export const Route = createFileRoute("/_authenticated/memberships")({
         description: "Assign plans to members.",
         table: "memberships",
         fields: [
-          { name: "member_id", label: "Member ID (UUID)", type: "text", required: true },
-          { name: "plan_id", label: "Plan ID (UUID)", type: "text", required: true },
+          { name: "member_id", label: "Member", type: "reference", required: true, refTable: "members", refLabel: "full_name" },
+          { name: "plan_id", label: "Plan", type: "reference", required: true, refTable: "membership_plans", refLabel: "name" },
           { name: "start_date", label: "Start date", type: "date", required: true },
           { name: "end_date", label: "End date", type: "date", required: true },
           { name: "amount", label: "Amount", type: "number", step: "0.01" },
