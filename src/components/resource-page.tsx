@@ -36,8 +36,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Search, Trash2, Pencil } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { MoreHorizontal, Plus, Search, Trash2, Pencil, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export type FieldType =
   | "text"
@@ -45,7 +59,8 @@ export type FieldType =
   | "date"
   | "textarea"
   | "checkbox"
-  | "select";
+  | "select"
+  | "reference";
 
 export type Field = {
   name: string;
@@ -55,7 +70,13 @@ export type Field = {
   options?: { label: string; value: string }[];
   defaultValue?: unknown;
   step?: string;
+  // For type: "reference"
+  refTable?: string;
+  refValue?: string; // default "id"
+  refLabel?: string; // display column, e.g. "full_name"
+  refSearchColumn?: string; // column to ilike-search, defaults to refLabel
 };
+
 
 export type Column<T = Record<string, unknown>> = {
   key: string;
