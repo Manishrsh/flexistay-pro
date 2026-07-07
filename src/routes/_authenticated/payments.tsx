@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ResourcePage } from "@/components/resource-page";
+import { generatePaymentInvoice } from "@/lib/invoice";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/payments")({
   component: () => (
