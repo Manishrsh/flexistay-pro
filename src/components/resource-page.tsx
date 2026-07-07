@@ -95,6 +95,7 @@ export type ResourceConfig = {
   orderBy?: { column: string; ascending?: boolean };
   fields: Field[];
   columns: Column[];
+  afterSave?: (row: Record<string, unknown>, ctx: { isEdit: boolean }) => void | Promise<void>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,22 +126,38 @@ export function ResourcePage({ config }: { config: ResourceConfig }) {
 
   const upsert = useMutation({
     mutationFn: async (values: Row) => {
-      if (editing?.id) {
-        const { error } = await supabase
+      const isEdit = !!editing?.id;
+      if (isEdit) {
+        const { data, error } = await supabase
           .from(config.table as never)
           .update(values as never)
-          .eq("id", editing.id);
+          .eq("id", editing!.id)
+          .select("*")
+          .maybeSingle();
         if (error) throw error;
+        return { row: (data ?? { ...editing, ...values }) as Row, isEdit };
       } else {
-        const { error } = await supabase.from(config.table as never).insert(values as never);
+        const { data, error } = await supabase
+          .from(config.table as never)
+          .insert(values as never)
+          .select("*")
+          .maybeSingle();
         if (error) throw error;
+        return { row: (data ?? values) as Row, isEdit };
       }
     },
-    onSuccess: () => {
-      toast.success(editing ? "Updated" : "Created");
+    onSuccess: async ({ row, isEdit }) => {
+      toast.success(isEdit ? "Updated" : "Created");
       setOpen(false);
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["res", config.table] });
+      if (config.afterSave) {
+        try {
+          await config.afterSave(row, { isEdit });
+        } catch (e) {
+          toast.error((e as Error).message);
+        }
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
