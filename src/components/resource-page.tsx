@@ -354,6 +354,13 @@ function ResourceForm({
                     ))}
                   </SelectContent>
                 </Select>
+              ) : f.type === "reference" ? (
+                <ReferenceCombobox
+                  field={f}
+                  value={values[f.name] ? String(values[f.name]) : ""}
+                  onChange={(v) => set(f.name, v)}
+                  required={f.required}
+                />
               ) : (
                 <Input
                   type={f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
