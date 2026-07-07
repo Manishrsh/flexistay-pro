@@ -75,7 +75,10 @@ export type Field = {
   refValue?: string; // default "id"
   refLabel?: string; // display column, e.g. "full_name"
   refSearchColumn?: string; // column to ilike-search, defaults to refLabel
+  // Map: this form field name -> column on the referenced row to copy from
+  autofill?: Record<string, string>;
 };
+
 
 
 export type Column<T = Record<string, unknown>> = {
