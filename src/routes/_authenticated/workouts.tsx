@@ -11,8 +11,8 @@ export const Route = createFileRoute("/_authenticated/workouts")({
         searchColumn: "name",
         fields: [
           { name: "name", label: "Plan name", type: "text", required: true },
-          { name: "member_id", label: "Member ID (optional)", type: "text" },
-          { name: "trainer_id", label: "Trainer ID (optional)", type: "text" },
+          { name: "member_id", label: "Member (optional)", type: "reference", refTable: "members", refLabel: "full_name" },
+          { name: "trainer_id", label: "Trainer (optional)", type: "reference", refTable: "trainers", refLabel: "full_name" },
           { name: "notes", label: "Notes", type: "textarea" },
         ],
         columns: [

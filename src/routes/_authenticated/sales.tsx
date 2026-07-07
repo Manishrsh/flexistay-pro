@@ -8,8 +8,8 @@ export const Route = createFileRoute("/_authenticated/sales")({
         title: "Product Sales",
         table: "product_sales",
         fields: [
-          { name: "product_id", label: "Product ID (UUID)", type: "text", required: true },
-          { name: "member_id", label: "Member ID (optional)", type: "text" },
+          { name: "product_id", label: "Product", type: "reference", required: true, refTable: "products", refLabel: "name" },
+          { name: "member_id", label: "Member (optional)", type: "reference", refTable: "members", refLabel: "full_name" },
           { name: "quantity", label: "Quantity", type: "number", defaultValue: 1 },
           { name: "unit_price", label: "Unit price (₹)", type: "number", step: "0.01" },
           { name: "total", label: "Total (₹)", type: "number", step: "0.01" },

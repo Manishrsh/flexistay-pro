@@ -9,8 +9,8 @@ export const Route = createFileRoute("/_authenticated/followups")({
         table: "followups",
         orderBy: { column: "followup_at", ascending: false },
         fields: [
-          { name: "lead_id", label: "Lead ID (optional)", type: "text" },
-          { name: "member_id", label: "Member ID (optional)", type: "text" },
+          { name: "lead_id", label: "Lead (optional)", type: "reference", refTable: "leads", refLabel: "full_name" },
+          { name: "member_id", label: "Member (optional)", type: "reference", refTable: "members", refLabel: "full_name" },
           { name: "followup_at", label: "Follow-up at (ISO)", type: "text", defaultValue: new Date().toISOString() },
           {
             name: "channel",

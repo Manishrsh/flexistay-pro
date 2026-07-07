@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/attendance")({
         table: "attendance",
         orderBy: { column: "check_in", ascending: false },
         fields: [
-          { name: "member_id", label: "Member ID (UUID)", type: "text", required: true },
+          { name: "member_id", label: "Member", type: "reference", required: true, refTable: "members", refLabel: "full_name" },
           { name: "check_in", label: "Check-in time", type: "text", defaultValue: new Date().toISOString() },
           { name: "check_out", label: "Check-out time", type: "text" },
           {
