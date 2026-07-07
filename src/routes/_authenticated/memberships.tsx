@@ -10,7 +10,16 @@ export const Route = createFileRoute("/_authenticated/memberships")({
         table: "memberships",
         fields: [
           { name: "member_id", label: "Member", type: "reference", required: true, refTable: "members", refLabel: "full_name" },
-          { name: "plan_id", label: "Plan", type: "reference", required: true, refTable: "membership_plans", refLabel: "name" },
+          {
+            name: "plan_id",
+            label: "Plan",
+            type: "reference",
+            required: true,
+            refTable: "membership_plans",
+            refLabel: "name",
+            autofill: { amount: "price" },
+          },
+
           { name: "start_date", label: "Start date", type: "date", required: true },
           { name: "end_date", label: "End date", type: "date", required: true },
           { name: "amount", label: "Amount", type: "number", step: "0.01" },
