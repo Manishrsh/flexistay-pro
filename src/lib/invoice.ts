@@ -27,7 +27,7 @@ export async function generatePaymentInvoice(payment: Row) {
     const { data } = await supabase
       .from("membership_plans")
       .select("*")
-      .eq("id", membership.plan_id)
+      .eq("id", membership.plan_id as string)
       .maybeSingle();
     plan = data as Row | null;
   }
