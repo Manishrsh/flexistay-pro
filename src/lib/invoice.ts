@@ -88,7 +88,7 @@ export async function generatePaymentInvoice(payment: Row) {
 
   // Line items table
   const tableTop = y;
-  doc.setFillColor(240);
+  doc.setFillColor(240, 240, 240);
   doc.rect(40, tableTop, W - 80, 22, "F");
   doc.setFont("helvetica", "bold");
   doc.text("Description", 48, tableTop + 15);
