@@ -485,9 +485,10 @@ function ReferenceCombobox({
                       key={v}
                       value={v}
                       onSelect={() => {
-                        onChange(v);
+                        onChange(v, o);
                         setOpen(false);
                       }}
+
                     >
                       <Check className={cn("h-4 w-4", value === v ? "opacity-100" : "opacity-0")} />
                       {l}
