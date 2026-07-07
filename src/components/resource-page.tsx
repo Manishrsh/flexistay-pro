@@ -406,7 +406,7 @@ function ReferenceCombobox({
 }: {
   field: Field;
   value: string;
-  onChange: (v: string) => void;
+  onChange: (v: string, row?: Row | null) => void;
   required?: boolean;
 }) {
   const [open, setOpen] = useState(false);
