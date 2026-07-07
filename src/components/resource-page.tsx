@@ -95,6 +95,7 @@ export type ResourceConfig = {
   orderBy?: { column: string; ascending?: boolean };
   fields: Field[];
   columns: Column[];
+  afterSave?: (row: Record<string, unknown>, ctx: { isEdit: boolean }) => void | Promise<void>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
