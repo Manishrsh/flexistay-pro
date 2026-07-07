@@ -382,3 +382,118 @@ function ResourceForm({
     </DialogContent>
   );
 }
+
+function ReferenceCombobox({
+  field,
+  value,
+  onChange,
+  required,
+}: {
+  field: Field;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const table = field.refTable!;
+  const valueCol = field.refValue ?? "id";
+  const labelCol = field.refLabel ?? "name";
+  const searchCol = field.refSearchColumn ?? labelCol;
+
+  const { data: options = [] } = useQuery({
+    queryKey: ["ref-opts", table, labelCol, search],
+    queryFn: async () => {
+      let q = supabase.from(table as never).select(`${valueCol}, ${labelCol}`);
+      if (search) q = q.ilike(searchCol, `%${search}%`) as typeof q;
+      const { data, error } = await q.limit(50);
+      if (error) throw error;
+      return (data ?? []) as Row[];
+    },
+  });
+
+  const { data: selected } = useQuery({
+    queryKey: ["ref-selected", table, labelCol, value],
+    enabled: !!value,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(table as never)
+        .select(`${valueCol}, ${labelCol}`)
+        .eq(valueCol, value)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Row | null;
+    },
+  });
+
+  const selectedLabel =
+    (selected?.[labelCol] as string | undefined) ??
+    (options.find((o) => String(o[valueCol]) === value)?.[labelCol] as string | undefined);
+
+  return (
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            className={cn("w-full justify-between font-normal", !value && "text-muted-foreground")}
+          >
+            {selectedLabel ?? (value ? value.slice(0, 8) + "…" : "Select…")}
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput placeholder="Search…" value={search} onValueChange={setSearch} />
+            <CommandList>
+              <CommandEmpty>No results.</CommandEmpty>
+              <CommandGroup>
+                {value && (
+                  <CommandItem
+                    value="__clear__"
+                    onSelect={() => {
+                      onChange("");
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="text-muted-foreground">Clear selection</span>
+                  </CommandItem>
+                )}
+                {options.map((o) => {
+                  const v = String(o[valueCol]);
+                  const l = String(o[labelCol] ?? v);
+                  return (
+                    <CommandItem
+                      key={v}
+                      value={v}
+                      onSelect={() => {
+                        onChange(v);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check className={cn("h-4 w-4", value === v ? "opacity-100" : "opacity-0")} />
+                      {l}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {/* hidden input for native required validation */}
+      {required && (
+        <input
+          tabIndex={-1}
+          aria-hidden
+          className="sr-only"
+          value={value}
+          onChange={() => {}}
+          required
+        />
+      )}
+    </>
+  );
+}
