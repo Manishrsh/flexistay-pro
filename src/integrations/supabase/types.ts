@@ -85,6 +85,95 @@ export type Database = {
         }
         Relationships: []
       }
+      diet_meal_sends: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          meal_id: string
+          member_id: string | null
+          sent_date: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          meal_id: string
+          member_id?: string | null
+          sent_date: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          meal_id?: string
+          member_id?: string | null
+          sent_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diet_meal_sends_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "diet_meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diet_meal_sends_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diet_meals: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          description: string | null
+          id: string
+          meal_name: string
+          meal_time: string
+          notify: boolean
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          description?: string | null
+          id?: string
+          meal_name: string
+          meal_time: string
+          notify?: boolean
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          description?: string | null
+          id?: string
+          meal_name?: string
+          meal_time?: string
+          notify?: boolean
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diet_meals_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "diet_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diet_plans: {
         Row: {
           breakfast: string | null
