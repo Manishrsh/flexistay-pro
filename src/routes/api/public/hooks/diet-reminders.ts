@@ -54,7 +54,11 @@ async function sendEvolution(phone: string, message: string) {
 export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const apikey = request.headers.get("apikey");
+        if (!apikey || apikey !== process.env.SUPABASE_PUBLISHABLE_KEY) {
+          return new Response("Unauthorized", { status: 401 });
+        }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const now = istNow();
         const timeStr = `${now.hh}:${now.mm}`;

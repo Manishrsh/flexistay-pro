@@ -33,6 +33,7 @@ import { Route as AuthenticatedDietRouteImport } from './routes/_authenticated/d
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedBranchesRouteImport } from './routes/_authenticated/branches'
 import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated/attendance'
+import { Route as ApiPublicHooksDietRemindersRouteImport } from './routes/api/public/hooks/diet-reminders'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -155,6 +156,12 @@ const AuthenticatedAttendanceRoute = AuthenticatedAttendanceRouteImport.update({
   path: '/attendance',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksDietRemindersRoute =
+  ApiPublicHooksDietRemindersRouteImport.update({
+    id: '/api/public/hooks/diet-reminders',
+    path: '/api/public/hooks/diet-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/staff': typeof AuthenticatedStaffRoute
   '/trainers': typeof AuthenticatedTrainersRoute
   '/workouts': typeof AuthenticatedWorkoutsRoute
+  '/api/public/hooks/diet-reminders': typeof ApiPublicHooksDietRemindersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -205,6 +213,7 @@ export interface FileRoutesByTo {
   '/staff': typeof AuthenticatedStaffRoute
   '/trainers': typeof AuthenticatedTrainersRoute
   '/workouts': typeof AuthenticatedWorkoutsRoute
+  '/api/public/hooks/diet-reminders': typeof ApiPublicHooksDietRemindersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -232,6 +241,7 @@ export interface FileRoutesById {
   '/_authenticated/staff': typeof AuthenticatedStaffRoute
   '/_authenticated/trainers': typeof AuthenticatedTrainersRoute
   '/_authenticated/workouts': typeof AuthenticatedWorkoutsRoute
+  '/api/public/hooks/diet-reminders': typeof ApiPublicHooksDietRemindersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/staff'
     | '/trainers'
     | '/workouts'
+    | '/api/public/hooks/diet-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/staff'
     | '/trainers'
     | '/workouts'
+    | '/api/public/hooks/diet-reminders'
   id:
     | '__root__'
     | '/'
@@ -310,12 +322,14 @@ export interface FileRouteTypes {
     | '/_authenticated/staff'
     | '/_authenticated/trainers'
     | '/_authenticated/workouts'
+    | '/api/public/hooks/diet-reminders'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicHooksDietRemindersRoute: typeof ApiPublicHooksDietRemindersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -488,6 +502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAttendanceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/diet-reminders': {
+      id: '/api/public/hooks/diet-reminders'
+      path: '/api/public/hooks/diet-reminders'
+      fullPath: '/api/public/hooks/diet-reminders'
+      preLoaderRoute: typeof ApiPublicHooksDietRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -546,17 +567,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicHooksDietRemindersRoute: ApiPublicHooksDietRemindersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
