@@ -111,23 +111,25 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
             (m.description ? `\n${m.description}\n` : "") +
             `\nPlan: ${plan?.name ?? ""}`;
 
+          const subject = `Diet reminder: ${m.meal_name}`;
           try {
             await sendEvolution(phone, msg);
             await supabaseAdmin.from("diet_meal_sends").insert({
-              meal_id: m.id,
-              member_id: memberId,
-              sent_date: now.date,
-              status: "sent",
+              meal_id: m.id, member_id: memberId, sent_date: now.date, status: "sent",
+            });
+            await supabaseAdmin.from("notifications").insert({
+              channel: "whatsapp", recipient: phone, subject, body: msg,
+              status: "sent", sent_at: new Date().toISOString(),
             });
             results.push({ meal_id: m.id, sent: true, phone });
           } catch (e) {
             const err = (e as Error).message;
             await supabaseAdmin.from("diet_meal_sends").insert({
-              meal_id: m.id,
-              member_id: memberId,
-              sent_date: now.date,
-              status: "failed",
-              error: err,
+              meal_id: m.id, member_id: memberId, sent_date: now.date, status: "failed", error: err,
+            });
+            await supabaseAdmin.from("notifications").insert({
+              channel: "whatsapp", recipient: phone, subject: `${subject} (FAILED)`,
+              body: `${msg}\n\n---\nError: ${err}`, status: "failed",
             });
             results.push({ meal_id: m.id, sent: false, error: err });
           }
