@@ -500,6 +500,39 @@ export type Database = {
           },
         ]
       }
+      membership_expiry_sends: {
+        Row: {
+          created_at: string
+          days_before: number
+          error: string | null
+          id: string
+          member_id: string | null
+          membership_id: string
+          sent_date: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          days_before: number
+          error?: string | null
+          id?: string
+          member_id?: string | null
+          membership_id: string
+          sent_date: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          days_before?: number
+          error?: string | null
+          id?: string
+          member_id?: string | null
+          membership_id?: string
+          sent_date?: string
+          status?: string
+        }
+        Relationships: []
+      }
       membership_plans: {
         Row: {
           created_at: string
