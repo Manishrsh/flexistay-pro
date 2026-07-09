@@ -33,6 +33,7 @@ import { Route as AuthenticatedDietRouteImport } from './routes/_authenticated/d
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedBranchesRouteImport } from './routes/_authenticated/branches'
 import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated/attendance'
+import { Route as ApiPublicHooksMembershipExpiryRemindersRouteImport } from './routes/api/public/hooks/membership-expiry-reminders'
 import { Route as ApiPublicHooksDietRemindersRouteImport } from './routes/api/public/hooks/diet-reminders'
 
 const AuthRoute = AuthRouteImport.update({
@@ -156,6 +157,12 @@ const AuthenticatedAttendanceRoute = AuthenticatedAttendanceRouteImport.update({
   path: '/attendance',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksMembershipExpiryRemindersRoute =
+  ApiPublicHooksMembershipExpiryRemindersRouteImport.update({
+    id: '/api/public/hooks/membership-expiry-reminders',
+    path: '/api/public/hooks/membership-expiry-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDietRemindersRoute =
   ApiPublicHooksDietRemindersRouteImport.update({
     id: '/api/public/hooks/diet-reminders',
@@ -188,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/trainers': typeof AuthenticatedTrainersRoute
   '/workouts': typeof AuthenticatedWorkoutsRoute
   '/api/public/hooks/diet-reminders': typeof ApiPublicHooksDietRemindersRoute
+  '/api/public/hooks/membership-expiry-reminders': typeof ApiPublicHooksMembershipExpiryRemindersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -214,6 +222,7 @@ export interface FileRoutesByTo {
   '/trainers': typeof AuthenticatedTrainersRoute
   '/workouts': typeof AuthenticatedWorkoutsRoute
   '/api/public/hooks/diet-reminders': typeof ApiPublicHooksDietRemindersRoute
+  '/api/public/hooks/membership-expiry-reminders': typeof ApiPublicHooksMembershipExpiryRemindersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -242,6 +251,7 @@ export interface FileRoutesById {
   '/_authenticated/trainers': typeof AuthenticatedTrainersRoute
   '/_authenticated/workouts': typeof AuthenticatedWorkoutsRoute
   '/api/public/hooks/diet-reminders': typeof ApiPublicHooksDietRemindersRoute
+  '/api/public/hooks/membership-expiry-reminders': typeof ApiPublicHooksMembershipExpiryRemindersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -270,6 +280,7 @@ export interface FileRouteTypes {
     | '/trainers'
     | '/workouts'
     | '/api/public/hooks/diet-reminders'
+    | '/api/public/hooks/membership-expiry-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/trainers'
     | '/workouts'
     | '/api/public/hooks/diet-reminders'
+    | '/api/public/hooks/membership-expiry-reminders'
   id:
     | '__root__'
     | '/'
@@ -323,6 +335,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trainers'
     | '/_authenticated/workouts'
     | '/api/public/hooks/diet-reminders'
+    | '/api/public/hooks/membership-expiry-reminders'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -330,6 +343,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicHooksDietRemindersRoute: typeof ApiPublicHooksDietRemindersRoute
+  ApiPublicHooksMembershipExpiryRemindersRoute: typeof ApiPublicHooksMembershipExpiryRemindersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -502,6 +516,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAttendanceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/membership-expiry-reminders': {
+      id: '/api/public/hooks/membership-expiry-reminders'
+      path: '/api/public/hooks/membership-expiry-reminders'
+      fullPath: '/api/public/hooks/membership-expiry-reminders'
+      preLoaderRoute: typeof ApiPublicHooksMembershipExpiryRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/diet-reminders': {
       id: '/api/public/hooks/diet-reminders'
       path: '/api/public/hooks/diet-reminders'
@@ -568,6 +589,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicHooksDietRemindersRoute: ApiPublicHooksDietRemindersRoute,
+  ApiPublicHooksMembershipExpiryRemindersRoute:
+    ApiPublicHooksMembershipExpiryRemindersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
