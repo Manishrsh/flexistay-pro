@@ -44,7 +44,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Trash2, Pencil, Calendar as CalendarIcon, ChevronsUpDown, Check } from "lucide-react";
+import { Plus, Trash2, Pencil, Calendar as CalendarIcon, ChevronsUpDown, Check, Zap } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { testEvolutionApi } from "@/lib/evolution-test.functions";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
