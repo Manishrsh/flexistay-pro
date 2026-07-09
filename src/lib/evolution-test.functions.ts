@@ -34,7 +34,7 @@ export const testEvolutionApi = createServerFn({ method: "POST" })
     }
 
     // 2) Optional test send
-    let send: Record<string, unknown> | null = null;
+    let send: { url: string; status?: number; body?: string; error?: string; payload: { number: string; text: string } } | null = null;
     if (data.phone) {
       const sendUrl = `${url}/message/sendText/${instance}`;
       const payload = { number: data.phone, text: data.message || "Test from gym admin ✅" };
@@ -49,6 +49,7 @@ export const testEvolutionApi = createServerFn({ method: "POST" })
         send = { url: sendUrl, error: (e as Error).message, payload };
       }
     }
+
 
     return {
       ok: stateStatus >= 200 && stateStatus < 300,
