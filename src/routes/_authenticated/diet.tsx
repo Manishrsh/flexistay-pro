@@ -105,23 +105,27 @@ function DietPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Diet Plans</h1>
           <p className="text-sm text-muted-foreground">
             Build weekly meal schedules with times. WhatsApp reminders auto-send at meal time (IST).
           </p>
         </div>
-        <Dialog open={planOpen} onOpenChange={(v) => { setPlanOpen(v); if (!v) setEditingPlan(null); }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4" /> New Plan</Button>
-          </DialogTrigger>
-          <PlanForm
-            key={editingPlan?.id ?? "new"}
-            initial={editingPlan}
-            onDone={() => { setPlanOpen(false); setEditingPlan(null); qc.invalidateQueries({ queryKey: ["diet_plans_all"] }); }}
-          />
-        </Dialog>
+        <div className="flex gap-2">
+          <EvolutionTestButton />
+          <Dialog open={planOpen} onOpenChange={(v) => { setPlanOpen(v); if (!v) setEditingPlan(null); }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4" /> New Plan</Button>
+            </DialogTrigger>
+            <PlanForm
+              key={editingPlan?.id ?? "new"}
+              initial={editingPlan}
+              onDone={() => { setPlanOpen(false); setEditingPlan(null); qc.invalidateQueries({ queryKey: ["diet_plans_all"] }); }}
+            />
+          </Dialog>
+        </div>
+
       </div>
 
       <div className="rounded-md border bg-card">
