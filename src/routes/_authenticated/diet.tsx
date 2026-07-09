@@ -44,7 +44,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Trash2, Pencil, Calendar as CalendarIcon, ChevronsUpDown, Check } from "lucide-react";
+import { Plus, Trash2, Pencil, Calendar as CalendarIcon, ChevronsUpDown, Check, Zap } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { testEvolutionApi } from "@/lib/evolution-test.functions";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -102,23 +105,27 @@ function DietPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Diet Plans</h1>
           <p className="text-sm text-muted-foreground">
             Build weekly meal schedules with times. WhatsApp reminders auto-send at meal time (IST).
           </p>
         </div>
-        <Dialog open={planOpen} onOpenChange={(v) => { setPlanOpen(v); if (!v) setEditingPlan(null); }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4" /> New Plan</Button>
-          </DialogTrigger>
-          <PlanForm
-            key={editingPlan?.id ?? "new"}
-            initial={editingPlan}
-            onDone={() => { setPlanOpen(false); setEditingPlan(null); qc.invalidateQueries({ queryKey: ["diet_plans_all"] }); }}
-          />
-        </Dialog>
+        <div className="flex gap-2">
+          <EvolutionTestButton />
+          <Dialog open={planOpen} onOpenChange={(v) => { setPlanOpen(v); if (!v) setEditingPlan(null); }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4" /> New Plan</Button>
+            </DialogTrigger>
+            <PlanForm
+              key={editingPlan?.id ?? "new"}
+              initial={editingPlan}
+              onDone={() => { setPlanOpen(false); setEditingPlan(null); qc.invalidateQueries({ queryKey: ["diet_plans_all"] }); }}
+            />
+          </Dialog>
+        </div>
+
       </div>
 
       <div className="rounded-md border bg-card">
@@ -423,6 +430,61 @@ function MealRow({ meal, onSave, onDelete }: { meal: Meal; onSave: (m: Meal) => 
   );
 }
 
+function EvolutionTestButton() {
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [message, setMessage] = useState("Test from gym admin ✅");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<unknown>(null);
+  const run = useServerFn(testEvolutionApi);
+
+  async function go() {
+    setBusy(true);
+    setResult(null);
+    try {
+      const r = await run({ data: { phone: phone || undefined, message } });
+      setResult(r);
+    } catch (e) {
+      setResult({ error: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline"><Zap className="h-4 w-4" /> Test WhatsApp API</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Evolution API test</DialogTitle>
+          <DialogDescription>Checks instance connection state. Optionally sends a test WhatsApp message.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Phone (optional, e.g. 919876543210)</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))} placeholder="919876543210" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Message</Label>
+              <Input value={message} onChange={(e) => setMessage(e.target.value)} />
+            </div>
+          </div>
+          <Button onClick={go} disabled={busy}>{busy ? "Testing…" : "Run test"}</Button>
+          {result != null && (
+            <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-[50vh] whitespace-pre-wrap break-all">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/diet")({
   component: DietPage,
 });
+
