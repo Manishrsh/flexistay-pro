@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 // day-of-week and time match the current IST minute, and haven't been sent today.
 
 const IST_TZ = "Asia/Kolkata";
+const LOOKBACK_MINUTES = 2;
 
 function istNow() {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -36,6 +37,25 @@ function normalizePhone(raw: string): string | null {
   return digits;
 }
 
+function toMinutes(hh: string, mm: string) {
+  return Number(hh) * 60 + Number(mm);
+}
+
+function fromMinutes(total: number) {
+  const normalized = ((total % 1440) + 1440) % 1440;
+  const hh = String(Math.floor(normalized / 60)).padStart(2, "0");
+  const mm = String(normalized % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
+  try {
+    return (await request.json()) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 async function sendEvolution(phone: string, message: string) {
   const url = process.env.EVOLUTION_API_URL?.replace(/\/+$/, "");
   const key = process.env.EVOLUTION_API_KEY;
@@ -59,18 +79,35 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
         if (!apikey || apikey !== process.env.SUPABASE_PUBLISHABLE_KEY) {
           return new Response("Unauthorized", { status: 401 });
         }
+        const body = await readJsonBody(request);
+        const forceMealId = typeof body.mealId === "string" ? body.mealId : null;
+        const forceMemberId = typeof body.memberId === "string" ? body.memberId : null;
+        const testMode = body.mode === "test" || body.test === true;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const now = istNow();
         const timeStr = `${now.hh}:${now.mm}`;
+        const windowStart = fromMinutes(toMinutes(now.hh, now.mm) - LOOKBACK_MINUTES);
 
         // Find meals due right now
-        const { data: meals, error } = await supabaseAdmin
+        let mealsQuery = supabaseAdmin
           .from("diet_meals")
           .select("id, plan_id, meal_name, description, meal_time, day_of_week, notify, diet_plans!inner(id, member_id, name)")
-          .eq("day_of_week", now.dow)
-          .eq("notify", true)
-          .gte("meal_time", `${timeStr}:00`)
-          .lte("meal_time", `${timeStr}:59`);
+          .eq("notify", true);
+
+        if (forceMealId) {
+          mealsQuery = mealsQuery.eq("id", forceMealId);
+        } else if (windowStart > timeStr) {
+          mealsQuery = mealsQuery
+            .eq("day_of_week", now.dow)
+            .or(`meal_time.gte.${windowStart}:00,meal_time.lte.${timeStr}:59`);
+        } else {
+          mealsQuery = mealsQuery
+            .eq("day_of_week", now.dow)
+            .gte("meal_time", `${windowStart}:00`)
+            .lte("meal_time", `${timeStr}:59`);
+        }
+
+        const { data: meals, error } = await mealsQuery;
 
         if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
 
@@ -88,6 +125,10 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
             .eq("plan_id", plan.id);
           for (const a of assigns ?? []) memberIds.add(a.member_id);
           if (plan?.member_id) memberIds.add(plan.member_id);
+          if (forceMemberId && memberIds.has(forceMemberId)) {
+            memberIds.clear();
+            memberIds.add(forceMemberId);
+          }
 
           if (memberIds.size === 0) {
             results.push({ meal_id: m.id, skipped: "no members assigned" });
@@ -114,7 +155,7 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
               .eq("member_id", memberId)
               .eq("sent_date", now.date)
               .maybeSingle();
-            if (existing?.status === "sent") {
+            if (!testMode && existing?.status === "sent") {
               results.push({ meal_id: m.id, member_id: memberId, skipped: "already sent" });
               continue;
             }
@@ -133,18 +174,21 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
 
             const subject = `Diet reminder: ${m.meal_name}`;
             try {
-              await sendEvolution(phone, msg);
-              const { error: sendLogError } = await supabaseAdmin.from("diet_meal_sends").upsert({
-                meal_id: m.id, member_id: memberId, sent_date: now.date, status: "sent", error: null,
-              }, {
-                onConflict: "meal_id,member_id,sent_date",
-              });
+              const evolutionBody = await sendEvolution(phone, msg);
+              const { error: sendLogError } = testMode
+                ? { error: null }
+                : await supabaseAdmin.from("diet_meal_sends").upsert({
+                  meal_id: m.id, member_id: memberId, sent_date: now.date, status: "sent", error: null,
+                }, {
+                  onConflict: "meal_id,member_id,sent_date",
+                });
               const { error: notificationLogError } = await supabaseAdmin.from("notifications").insert({
-                channel: "whatsapp", recipient: phone, subject, body: msg,
+                channel: "whatsapp", recipient: phone, subject: testMode ? `${subject} (TEST)` : subject, body: msg,
                 status: "sent", sent_at: new Date().toISOString(),
               });
               results.push({
-                meal_id: m.id, member_id: memberId, sent: true, phone,
+                meal_id: m.id, member_id: memberId, sent: true, phone, test_mode: testMode,
+                evolution_response_preview: evolutionBody.slice(0, 500),
                 send_log_error: sendLogError?.message,
                 notification_log_error: notificationLogError?.message,
               });
@@ -169,7 +213,7 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
         }
 
 
-        return Response.json({ ok: true, at: `${now.date} ${timeStr} IST`, count: results.length, results });
+        return Response.json({ ok: true, at: `${now.date} ${timeStr} IST`, window: `${windowStart}-${timeStr} IST`, count: results.length, results });
       },
       GET: async () => Response.json({ ok: true, hint: "POST to trigger" }),
     },
