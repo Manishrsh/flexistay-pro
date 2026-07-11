@@ -177,30 +177,66 @@ function DietPage() {
 
 function PlanForm({ initial, onDone }: { initial: Plan | null; onDone: () => void }) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [memberId, setMemberId] = useState(initial?.member_id ?? "");
+  const [memberIds, setMemberIds] = useState<string[]>([]);
   const [calories, setCalories] = useState(initial?.calories?.toString() ?? "");
   const [protein, setProtein] = useState(initial?.protein_g?.toString() ?? "");
   const [water, setWater] = useState(initial?.water_liters?.toString() ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [busy, setBusy] = useState(false);
 
+  // Load existing assigned members
+  useQuery({
+    queryKey: ["diet_plan_members", initial?.id],
+    enabled: !!initial?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("diet_plan_members")
+        .select("member_id")
+        .eq("plan_id", initial!.id);
+      if (error) throw error;
+      const ids = (data ?? []).map((r) => r.member_id);
+      if (initial?.member_id && !ids.includes(initial.member_id)) ids.push(initial.member_id);
+      setMemberIds(ids);
+      return ids;
+    },
+  });
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     const values = {
       name,
-      member_id: memberId || null,
+      member_id: memberIds[0] ?? null, // keep legacy column populated with first member
       calories: calories ? Number(calories) : null,
       protein_g: protein ? Number(protein) : null,
       water_liters: water ? Number(water) : null,
       notes: notes || null,
     };
     try {
-      if (initial?.id) {
-        const { error } = await supabase.from("diet_plans").update(values).eq("id", initial.id);
+      let planId = initial?.id;
+      if (planId) {
+        const { error } = await supabase.from("diet_plans").update(values).eq("id", planId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("diet_plans").insert(values);
+        const { data, error } = await supabase.from("diet_plans").insert(values).select("id").single();
+        if (error) throw error;
+        planId = data.id;
+      }
+      // Sync join table
+      const { data: existing } = await supabase
+        .from("diet_plan_members").select("member_id").eq("plan_id", planId!);
+      const existingIds = new Set((existing ?? []).map((r) => r.member_id));
+      const nextIds = new Set(memberIds);
+      const toAdd = [...nextIds].filter((id) => !existingIds.has(id));
+      const toRemove = [...existingIds].filter((id) => !nextIds.has(id));
+      if (toAdd.length) {
+        const { error } = await supabase.from("diet_plan_members")
+          .insert(toAdd.map((member_id) => ({ plan_id: planId!, member_id })));
+        if (error) throw error;
+      }
+      if (toRemove.length) {
+        const { error } = await supabase.from("diet_plan_members")
+          .delete().eq("plan_id", planId!).in("member_id", toRemove);
         if (error) throw error;
       }
       toast.success("Saved");
@@ -216,7 +252,7 @@ function PlanForm({ initial, onDone }: { initial: Plan | null; onDone: () => voi
     <DialogContent className="max-w-2xl">
       <DialogHeader>
         <DialogTitle>{initial ? "Edit" : "New"} Diet Plan</DialogTitle>
-        <DialogDescription>Assign to a member to enable WhatsApp reminders.</DialogDescription>
+        <DialogDescription>Assign one or more members to enable WhatsApp reminders.</DialogDescription>
       </DialogHeader>
       <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5 sm:col-span-2">
@@ -224,9 +260,10 @@ function PlanForm({ initial, onDone }: { initial: Plan | null; onDone: () => voi
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label>Member</Label>
-          <MemberPicker value={memberId} onChange={setMemberId} />
+          <Label>Members</Label>
+          <MultiMemberPicker value={memberIds} onChange={setMemberIds} />
         </div>
+
         <div className="space-y-1.5"><Label>Calories (kcal)</Label><Input type="number" value={calories} onChange={(e) => setCalories(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Protein (g)</Label><Input type="number" value={protein} onChange={(e) => setProtein(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Water (L)</Label><Input type="number" step="0.1" value={water} onChange={(e) => setWater(e.target.value)} /></div>
