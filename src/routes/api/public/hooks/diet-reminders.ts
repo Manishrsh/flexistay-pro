@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
         // Find meals due right now
         const { data: meals, error } = await supabaseAdmin
           .from("diet_meals")
-          .select("id, plan_id, meal_name, description, meal_time, day_of_week, notify, diet_plans!inner(member_id, name, members(id, full_name, mobile))")
+          .select("id, plan_id, meal_name, description, meal_time, day_of_week, notify, diet_plans!inner(id, member_id, name)")
           .eq("day_of_week", now.dow)
           .eq("notify", true)
           .gte("meal_time", `${timeStr}:00`)
@@ -79,77 +79,95 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
         for (const m of meals ?? []) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const plan: any = (m as any).diet_plans;
-          const member = plan?.members;
-          const memberId = member?.id ?? null;
-          if (!member?.mobile) {
-            results.push({ meal_id: m.id, skipped: "no member phone" });
+
+          // Collect all assigned members: join table + legacy single member_id
+          const memberIds = new Set<string>();
+          const { data: assigns } = await supabaseAdmin
+            .from("diet_plan_members")
+            .select("member_id")
+            .eq("plan_id", plan.id);
+          for (const a of assigns ?? []) memberIds.add(a.member_id);
+          if (plan?.member_id) memberIds.add(plan.member_id);
+
+          if (memberIds.size === 0) {
+            results.push({ meal_id: m.id, skipped: "no members assigned" });
             continue;
           }
 
-          // Dedup only successful sends; failed attempts can be retried and logged again.
-          const { data: existing } = await supabaseAdmin
-            .from("diet_meal_sends")
-            .select("id, status")
-            .eq("meal_id", m.id)
-            .eq("member_id", memberId)
-            .eq("sent_date", now.date)
-            .maybeSingle();
-          if (existing?.status === "sent") {
-            results.push({ meal_id: m.id, skipped: "already sent" });
-            continue;
-          }
+          const { data: members } = await supabaseAdmin
+            .from("members")
+            .select("id, full_name, mobile")
+            .in("id", Array.from(memberIds));
 
-          const phone = normalizePhone(member.mobile);
-          if (!phone) {
-            results.push({ meal_id: m.id, skipped: "invalid phone" });
-            continue;
-          }
+          for (const member of members ?? []) {
+            const memberId = member.id;
+            if (!member.mobile) {
+              results.push({ meal_id: m.id, member_id: memberId, skipped: "no member phone" });
+              continue;
+            }
 
-          const msg =
-            `🍽️ *${m.meal_name}* reminder\n` +
-            `Hi ${member.full_name || "there"}, it's time for your ${m.meal_name.toLowerCase()}.\n` +
-            (m.description ? `\n${m.description}\n` : "") +
-            `\nPlan: ${plan?.name ?? ""}`;
+            // Dedup only successful sends; failed attempts can be retried and logged again.
+            const { data: existing } = await supabaseAdmin
+              .from("diet_meal_sends")
+              .select("id, status")
+              .eq("meal_id", m.id)
+              .eq("member_id", memberId)
+              .eq("sent_date", now.date)
+              .maybeSingle();
+            if (existing?.status === "sent") {
+              results.push({ meal_id: m.id, member_id: memberId, skipped: "already sent" });
+              continue;
+            }
 
-          const subject = `Diet reminder: ${m.meal_name}`;
-          try {
-            await sendEvolution(phone, msg);
-            const { error: sendLogError } = await supabaseAdmin.from("diet_meal_sends").upsert({
-              meal_id: m.id, member_id: memberId, sent_date: now.date, status: "sent", error: null,
-            }, {
-              onConflict: "meal_id,member_id,sent_date",
-            });
-            const { error: notificationLogError } = await supabaseAdmin.from("notifications").insert({
-              channel: "whatsapp", recipient: phone, subject, body: msg,
-              status: "sent", sent_at: new Date().toISOString(),
-            });
-            results.push({
-              meal_id: m.id,
-              sent: true,
-              phone,
-              send_log_error: sendLogError?.message,
-              notification_log_error: notificationLogError?.message,
-            });
-          } catch (e) {
-            const err = (e as Error).message;
-            const { error: sendLogError } = await supabaseAdmin.from("diet_meal_sends").upsert({
-              meal_id: m.id, member_id: memberId, sent_date: now.date, status: "failed", error: err,
-            }, {
-              onConflict: "meal_id,member_id,sent_date",
-            });
-            const { error: notificationLogError } = await supabaseAdmin.from("notifications").insert({
-              channel: "whatsapp", recipient: phone, subject: `${subject} (FAILED)`,
-              body: `${msg}\n\n---\nError: ${err}`, status: "failed",
-            });
-            results.push({
-              meal_id: m.id,
-              sent: false,
-              error: err,
-              send_log_error: sendLogError?.message,
-              notification_log_error: notificationLogError?.message,
-            });
+            const phone = normalizePhone(member.mobile);
+            if (!phone) {
+              results.push({ meal_id: m.id, member_id: memberId, skipped: "invalid phone" });
+              continue;
+            }
+
+            const msg =
+              `🍽️ *${m.meal_name}* reminder\n` +
+              `Hi ${member.full_name || "there"}, it's time for your ${m.meal_name.toLowerCase()}.\n` +
+              (m.description ? `\n${m.description}\n` : "") +
+              `\nPlan: ${plan?.name ?? ""}`;
+
+            const subject = `Diet reminder: ${m.meal_name}`;
+            try {
+              await sendEvolution(phone, msg);
+              const { error: sendLogError } = await supabaseAdmin.from("diet_meal_sends").upsert({
+                meal_id: m.id, member_id: memberId, sent_date: now.date, status: "sent", error: null,
+              }, {
+                onConflict: "meal_id,member_id,sent_date",
+              });
+              const { error: notificationLogError } = await supabaseAdmin.from("notifications").insert({
+                channel: "whatsapp", recipient: phone, subject, body: msg,
+                status: "sent", sent_at: new Date().toISOString(),
+              });
+              results.push({
+                meal_id: m.id, member_id: memberId, sent: true, phone,
+                send_log_error: sendLogError?.message,
+                notification_log_error: notificationLogError?.message,
+              });
+            } catch (e) {
+              const err = (e as Error).message;
+              const { error: sendLogError } = await supabaseAdmin.from("diet_meal_sends").upsert({
+                meal_id: m.id, member_id: memberId, sent_date: now.date, status: "failed", error: err,
+              }, {
+                onConflict: "meal_id,member_id,sent_date",
+              });
+              const { error: notificationLogError } = await supabaseAdmin.from("notifications").insert({
+                channel: "whatsapp", recipient: phone, subject: `${subject} (FAILED)`,
+                body: `${msg}\n\n---\nError: ${err}`, status: "failed",
+              });
+              results.push({
+                meal_id: m.id, member_id: memberId, sent: false, error: err,
+                send_log_error: sendLogError?.message,
+                notification_log_error: notificationLogError?.message,
+              });
+            }
           }
         }
+
 
         return Response.json({ ok: true, at: `${now.date} ${timeStr} IST`, count: results.length, results });
       },
