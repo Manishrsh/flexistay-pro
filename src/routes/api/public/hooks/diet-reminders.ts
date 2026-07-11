@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 // day-of-week and time match the current IST minute, and haven't been sent today.
 
 const IST_TZ = "Asia/Kolkata";
+const LOOKBACK_MINUTES = 2;
 
 function istNow() {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -34,6 +35,17 @@ function normalizePhone(raw: string): string | null {
   if (digits.length === 12 && digits.startsWith("91")) return digits;
   if (digits.length === 11 && digits.startsWith("0")) return `91${digits.slice(1)}`;
   return digits;
+}
+
+function toMinutes(hh: string, mm: string) {
+  return Number(hh) * 60 + Number(mm);
+}
+
+function fromMinutes(total: number) {
+  const normalized = ((total % 1440) + 1440) % 1440;
+  const hh = String(Math.floor(normalized / 60)).padStart(2, "0");
+  const mm = String(normalized % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
 }
 
 async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
@@ -74,6 +86,7 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const now = istNow();
         const timeStr = `${now.hh}:${now.mm}`;
+        const windowStart = fromMinutes(toMinutes(now.hh, now.mm) - LOOKBACK_MINUTES);
 
         // Find meals due right now
         let mealsQuery = supabaseAdmin
@@ -83,10 +96,14 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
 
         if (forceMealId) {
           mealsQuery = mealsQuery.eq("id", forceMealId);
+        } else if (windowStart > timeStr) {
+          mealsQuery = mealsQuery
+            .eq("day_of_week", now.dow)
+            .or(`meal_time.gte.${windowStart}:00,meal_time.lte.${timeStr}:59`);
         } else {
           mealsQuery = mealsQuery
             .eq("day_of_week", now.dow)
-            .gte("meal_time", `${timeStr}:00`)
+            .gte("meal_time", `${windowStart}:00`)
             .lte("meal_time", `${timeStr}:59`);
         }
 
@@ -196,7 +213,7 @@ export const Route = createFileRoute("/api/public/hooks/diet-reminders")({
         }
 
 
-        return Response.json({ ok: true, at: `${now.date} ${timeStr} IST`, count: results.length, results });
+        return Response.json({ ok: true, at: `${now.date} ${timeStr} IST`, window: `${windowStart}-${timeStr} IST`, count: results.length, results });
       },
       GET: async () => Response.json({ ok: true, hint: "POST to trigger" }),
     },
