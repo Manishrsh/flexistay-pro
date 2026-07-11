@@ -177,30 +177,66 @@ function DietPage() {
 
 function PlanForm({ initial, onDone }: { initial: Plan | null; onDone: () => void }) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [memberId, setMemberId] = useState(initial?.member_id ?? "");
+  const [memberIds, setMemberIds] = useState<string[]>([]);
   const [calories, setCalories] = useState(initial?.calories?.toString() ?? "");
   const [protein, setProtein] = useState(initial?.protein_g?.toString() ?? "");
   const [water, setWater] = useState(initial?.water_liters?.toString() ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [busy, setBusy] = useState(false);
 
+  // Load existing assigned members
+  useQuery({
+    queryKey: ["diet_plan_members", initial?.id],
+    enabled: !!initial?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("diet_plan_members")
+        .select("member_id")
+        .eq("plan_id", initial!.id);
+      if (error) throw error;
+      const ids = (data ?? []).map((r) => r.member_id);
+      if (initial?.member_id && !ids.includes(initial.member_id)) ids.push(initial.member_id);
+      setMemberIds(ids);
+      return ids;
+    },
+  });
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     const values = {
       name,
-      member_id: memberId || null,
+      member_id: memberIds[0] ?? null, // keep legacy column populated with first member
       calories: calories ? Number(calories) : null,
       protein_g: protein ? Number(protein) : null,
       water_liters: water ? Number(water) : null,
       notes: notes || null,
     };
     try {
-      if (initial?.id) {
-        const { error } = await supabase.from("diet_plans").update(values).eq("id", initial.id);
+      let planId = initial?.id;
+      if (planId) {
+        const { error } = await supabase.from("diet_plans").update(values).eq("id", planId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("diet_plans").insert(values);
+        const { data, error } = await supabase.from("diet_plans").insert(values).select("id").single();
+        if (error) throw error;
+        planId = data.id;
+      }
+      // Sync join table
+      const { data: existing } = await supabase
+        .from("diet_plan_members").select("member_id").eq("plan_id", planId!);
+      const existingIds = new Set((existing ?? []).map((r) => r.member_id));
+      const nextIds = new Set(memberIds);
+      const toAdd = [...nextIds].filter((id) => !existingIds.has(id));
+      const toRemove = [...existingIds].filter((id) => !nextIds.has(id));
+      if (toAdd.length) {
+        const { error } = await supabase.from("diet_plan_members")
+          .insert(toAdd.map((member_id) => ({ plan_id: planId!, member_id })));
+        if (error) throw error;
+      }
+      if (toRemove.length) {
+        const { error } = await supabase.from("diet_plan_members")
+          .delete().eq("plan_id", planId!).in("member_id", toRemove);
         if (error) throw error;
       }
       toast.success("Saved");
@@ -216,7 +252,7 @@ function PlanForm({ initial, onDone }: { initial: Plan | null; onDone: () => voi
     <DialogContent className="max-w-2xl">
       <DialogHeader>
         <DialogTitle>{initial ? "Edit" : "New"} Diet Plan</DialogTitle>
-        <DialogDescription>Assign to a member to enable WhatsApp reminders.</DialogDescription>
+        <DialogDescription>Assign one or more members to enable WhatsApp reminders.</DialogDescription>
       </DialogHeader>
       <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5 sm:col-span-2">
@@ -224,9 +260,10 @@ function PlanForm({ initial, onDone }: { initial: Plan | null; onDone: () => voi
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label>Member</Label>
-          <MemberPicker value={memberId} onChange={setMemberId} />
+          <Label>Members</Label>
+          <MultiMemberPicker value={memberIds} onChange={setMemberIds} />
         </div>
+
         <div className="space-y-1.5"><Label>Calories (kcal)</Label><Input type="number" value={calories} onChange={(e) => setCalories(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Protein (g)</Label><Input type="number" value={protein} onChange={(e) => setProtein(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Water (L)</Label><Input type="number" step="0.1" value={water} onChange={(e) => setWater(e.target.value)} /></div>
@@ -239,7 +276,7 @@ function PlanForm({ initial, onDone }: { initial: Plan | null; onDone: () => voi
   );
 }
 
-function MemberPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function MultiMemberPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { data: options = [] } = useQuery({
@@ -252,46 +289,62 @@ function MemberPicker({ value, onChange }: { value: string; onChange: (v: string
       return data ?? [];
     },
   });
-  const { data: selected } = useQuery({
-    queryKey: ["member-sel", value],
-    enabled: !!value,
+  const { data: selectedMembers = [] } = useQuery({
+    queryKey: ["members-sel-multi", value.slice().sort().join(",")],
+    enabled: value.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("members").select("id, full_name").eq("id", value).maybeSingle();
-      return data;
+      const { data } = await supabase.from("members").select("id, full_name").in("id", value);
+      return data ?? [];
     },
   });
+  const toggle = (id: string) => {
+    if (value.includes(id)) onChange(value.filter((v) => v !== id));
+    else onChange([...value, id]);
+  };
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className={cn("w-full justify-between font-normal", !value && "text-muted-foreground")}>
-          {selected?.full_name ?? (value ? "…" : "Select member…")}
-          <ChevronsUpDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput placeholder="Search members…" value={search} onValueChange={setSearch} />
-          <CommandList>
-            <CommandEmpty>No members.</CommandEmpty>
-            <CommandGroup>
-              {value && (
-                <CommandItem value="__clear__" onSelect={() => { onChange(""); setOpen(false); }}>
-                  <span className="text-muted-foreground">Clear</span>
-                </CommandItem>
-              )}
-              {options.map((o) => (
-                <CommandItem key={o.id} value={o.id} onSelect={() => { onChange(o.id); setOpen(false); }}>
-                  <Check className={cn("h-4 w-4", value === o.id ? "opacity-100" : "opacity-0")} />
-                  {o.full_name} <span className="text-muted-foreground text-xs ml-2">{o.mobile}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" className={cn("w-full justify-between font-normal", value.length === 0 && "text-muted-foreground")}>
+            {value.length === 0 ? "Select members…" : `${value.length} member${value.length === 1 ? "" : "s"} selected`}
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput placeholder="Search members…" value={search} onValueChange={setSearch} />
+            <CommandList>
+              <CommandEmpty>No members.</CommandEmpty>
+              <CommandGroup>
+                {options.map((o) => (
+                  <CommandItem key={o.id} value={o.id} onSelect={() => toggle(o.id)}>
+                    <Check className={cn("h-4 w-4", value.includes(o.id) ? "opacity-100" : "opacity-0")} />
+                    {o.full_name} <span className="text-muted-foreground text-xs ml-2">{o.mobile}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selectedMembers.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedMembers.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => toggle(m.id)}
+              className="text-xs bg-muted hover:bg-muted/70 px-2 py-1 rounded-md inline-flex items-center gap-1"
+            >
+              {m.full_name} <Trash2 className="h-3 w-3" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
+
 
 function ScheduleEditor({ plan }: { plan: Plan }) {
   const qc = useQueryClient();

@@ -174,6 +174,42 @@ export type Database = {
           },
         ]
       }
+      diet_plan_members: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string
+          plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id: string
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diet_plan_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diet_plan_members_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "diet_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diet_plans: {
         Row: {
           breakfast: string | null
