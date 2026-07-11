@@ -276,7 +276,7 @@ function PlanForm({ initial, onDone }: { initial: Plan | null; onDone: () => voi
   );
 }
 
-function MemberPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function MultiMemberPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { data: options = [] } = useQuery({
@@ -289,46 +289,62 @@ function MemberPicker({ value, onChange }: { value: string; onChange: (v: string
       return data ?? [];
     },
   });
-  const { data: selected } = useQuery({
-    queryKey: ["member-sel", value],
-    enabled: !!value,
+  const { data: selectedMembers = [] } = useQuery({
+    queryKey: ["members-sel-multi", value.slice().sort().join(",")],
+    enabled: value.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("members").select("id, full_name").eq("id", value).maybeSingle();
-      return data;
+      const { data } = await supabase.from("members").select("id, full_name").in("id", value);
+      return data ?? [];
     },
   });
+  const toggle = (id: string) => {
+    if (value.includes(id)) onChange(value.filter((v) => v !== id));
+    else onChange([...value, id]);
+  };
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className={cn("w-full justify-between font-normal", !value && "text-muted-foreground")}>
-          {selected?.full_name ?? (value ? "…" : "Select member…")}
-          <ChevronsUpDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput placeholder="Search members…" value={search} onValueChange={setSearch} />
-          <CommandList>
-            <CommandEmpty>No members.</CommandEmpty>
-            <CommandGroup>
-              {value && (
-                <CommandItem value="__clear__" onSelect={() => { onChange(""); setOpen(false); }}>
-                  <span className="text-muted-foreground">Clear</span>
-                </CommandItem>
-              )}
-              {options.map((o) => (
-                <CommandItem key={o.id} value={o.id} onSelect={() => { onChange(o.id); setOpen(false); }}>
-                  <Check className={cn("h-4 w-4", value === o.id ? "opacity-100" : "opacity-0")} />
-                  {o.full_name} <span className="text-muted-foreground text-xs ml-2">{o.mobile}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" className={cn("w-full justify-between font-normal", value.length === 0 && "text-muted-foreground")}>
+            {value.length === 0 ? "Select members…" : `${value.length} member${value.length === 1 ? "" : "s"} selected`}
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput placeholder="Search members…" value={search} onValueChange={setSearch} />
+            <CommandList>
+              <CommandEmpty>No members.</CommandEmpty>
+              <CommandGroup>
+                {options.map((o) => (
+                  <CommandItem key={o.id} value={o.id} onSelect={() => toggle(o.id)}>
+                    <Check className={cn("h-4 w-4", value.includes(o.id) ? "opacity-100" : "opacity-0")} />
+                    {o.full_name} <span className="text-muted-foreground text-xs ml-2">{o.mobile}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selectedMembers.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedMembers.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => toggle(m.id)}
+              className="text-xs bg-muted hover:bg-muted/70 px-2 py-1 rounded-md inline-flex items-center gap-1"
+            >
+              {m.full_name} <Trash2 className="h-3 w-3" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
+
 
 function ScheduleEditor({ plan }: { plan: Plan }) {
   const qc = useQueryClient();
