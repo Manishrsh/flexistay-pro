@@ -20,7 +20,7 @@ function AuthenticatedLayout() {
       <SidebarInset>
         <header className="flex h-14 items-center gap-2 border-b bg-background px-4 sticky top-0 z-10">
           <SidebarTrigger />
-          <div className="text-sm text-muted-foreground">FitCore Admin</div>
+          <div className="text-sm text-muted-foreground">ScaleGym Admin</div>
         </header>
         <main className="p-6">
           <Outlet />

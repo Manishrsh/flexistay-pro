@@ -12,7 +12,7 @@ import { Dumbbell } from "lucide-react";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — FitCore" },
+      { title: "Sign in — ScaleGym" },
       { name: "description", content: "Sign in to manage your gym." },
     ],
   }),
@@ -59,7 +59,7 @@ function AuthPage() {
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       <div className="hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
         <div className="flex items-center gap-2 font-bold text-xl">
-          <Dumbbell className="h-6 w-6 text-primary" /> FitCore
+          <Dumbbell className="h-6 w-6 text-primary" /> ScaleGym
         </div>
         <div className="space-y-4">
           <h1 className="text-4xl font-bold tracking-tight">Run your gym like a pro.</h1>
@@ -68,7 +68,7 @@ function AuthPage() {
             reports — everything in one place.
           </p>
         </div>
-        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} FitCore</p>
+        <p className="text-xs text-muted-foreground">Copyright {new Date().getFullYear()} ScaleGym</p>
       </div>
 
       <div className="flex items-center justify-center p-6">

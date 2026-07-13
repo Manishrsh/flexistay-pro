@@ -40,7 +40,7 @@ export function AppSidebar() {
             <Dumbbell className="h-4 w-4" />
           </div>
           <div>
-            <div className="font-semibold leading-none">FitCore</div>
+            <div className="font-semibold leading-none">ScaleGym</div>
             <div className="text-xs text-muted-foreground">Gym Management</div>
           </div>
         </div>
