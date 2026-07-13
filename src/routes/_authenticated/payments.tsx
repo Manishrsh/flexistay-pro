@@ -17,9 +17,9 @@ export const Route = createFileRoute("/_authenticated/payments")({
             name: "membership_id",
             label: "Membership",
             type: "reference",
-            refTable: "memberships",
-            refLabel: "id",
-            refSearchColumn: "id",
+            refTable: "membership_options",
+            refLabel: "label",
+            refSearchColumn: "label",
             autofill: { member_id: "member_id", amount: "amount" },
           },
 

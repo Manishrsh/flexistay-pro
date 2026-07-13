@@ -7,10 +7,10 @@ export const Route = createFileRoute("/_authenticated/roles")({
       config={{
         title: "Roles & Permissions",
         description:
-          "Assign a role to a user by their auth User ID. The first signed-up user is automatically the Owner.",
+          "Choose a team member and assign their access level. The first signed-up user is automatically the Owner.",
         table: "user_roles",
         fields: [
-          { name: "user_id", label: "User ID (auth.users UUID)", type: "text", required: true },
+          { name: "user_id", label: "Team member", type: "reference", required: true, refTable: "user_profiles", refLabel: "display_name", refSearchColumn: "display_name" },
           {
             name: "role",
             label: "Role",
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/roles")({
           },
         ],
         columns: [
-          { key: "user_id", label: "User ID" },
+          { key: "user_id", label: "Team member" },
           { key: "role", label: "Role" },
           { key: "created_at", label: "Assigned" },
         ],
